@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu de Survie</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #222;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 2px solid white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Jeu de Survie</h1>
+    <canvas id="jeuCanvas" width="800" height="800"></canvas>
+    <p>Déplacez-vous avec les touches Z, Q, S, D ou les flèches. Appuyez sur ESPACE pour attaquer.</p>
+    <script>
+        const canvas = document.getElementById("jeuCanvas");
+        const ctx = canvas.getContext("2d");
+        const taille = 20;
+        const cellSize = 40;
+        let joueur = { x: Math.floor(taille / 2), y: Math.floor(taille / 2), vivant: true };
+        let mondeData = Array.from({ length: taille }, () => Array(taille).fill('.'));
+        let ennemis = [];
+        let projectiles = [];
+
+        for (let i = 0; i < taille * 4; i++) {
+            let x = Math.floor(Math.random() * taille);
+            let y = Math.floor(Math.random() * taille);
+            mondeData[x][y] = 'T';
+        }
+
+        for (let i = 0; i < 5; i++) {
+            let x, y;
+            do {
+                x = Math.floor(Math.random() * taille);
+                y = Math.floor(Math.random() * taille);
+            } while (mondeData[x][y] !== '.');
+            ennemis.push({ x, y, direction: Math.random() < 0.5 ? "horizontal" : "vertical" });
+        }
+
+        function afficherMonde() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < taille; i++) {
+                for (let j = 0; j < taille; j++) {
+                    ctx.strokeStyle = "white";
+                    ctx.strokeRect(j * cellSize, i * cellSize, cellSize, cellSize);
+                    if (mondeData[i][j] === 'T') {
+                        ctx.fillStyle = "green";
+                        ctx.fillRect(j * cellSize, i * cellSize, cellSize, cellSize);
+                    }
+                }
+            }
+            if (joueur.vivant) {
+                ctx.fillStyle = "red";
+                ctx.fillRect(joueur.y * cellSize, joueur.x * cellSize, cellSize, cellSize);
+            }
+
+            ctx.fillStyle = "blue";
+            ennemis.forEach(ennemi => {
+                ctx.fillRect(ennemi.y * cellSize, ennemi.x * cellSize, cellSize, cellSize);
+            });
+
+            ctx.fillStyle = "yellow";
+            projectiles.forEach(proj => {
+                ctx.fillRect(proj.y * cellSize, proj.x * cellSize, cellSize / 2, cellSize / 2);
+            });
+        }
+
+        function deplacerEnnemis() {
+            ennemis.forEach(ennemi => {
+                if (ennemi.direction === "horizontal") {
+                    ennemi.y += Math.random() < 0.5 ? -1 : 1;
+                    if (ennemi.y < 0) ennemi.y = 0;
+                    if (ennemi.y >= taille) ennemi.y = taille - 1;
+                } else {
+                    ennemi.x += Math.random() < 0.5 ? -1 : 1;
+                    if (ennemi.x < 0) ennemi.x = 0;
+                    if (ennemi.x >= taille) ennemi.x = taille - 1;
+                }
+            });
+        }
+
+        function tirerProjectile() {
+            ennemis.forEach(ennemi => {
+                let directionX = joueur.x > ennemi.x ? 1 : -1;
+                let directionY = joueur.y > ennemi.y ? 1 : -1;
+                projectiles.push({ x: ennemi.x, y: ennemi.y, dx: directionX, dy: directionY });
+            });
+        }
+
+        function mettreAJourProjectiles() {
+            projectiles.forEach(proj => {
+                proj.x += proj.dx;
+                proj.y += proj.dy;
+                if (proj.x === joueur.x && proj.y === joueur.y) {
+                    joueur.vivant = false;
+                    alert("Vous êtes mort !");
+                }
+            });
+            projectiles = projectiles.filter(proj => proj.x >= 0 && proj.x < taille && proj.y >= 0 && proj.y < taille);
+        }
+
+        function attaquer() {
+            ennemis = ennemis.filter(ennemi => {
+                let distance = Math.abs(joueur.x - ennemi.x) + Math.abs(joueur.y - ennemi.y);
+                return distance > 1;
+            });
+            afficherMonde();
+        }
+
+        document.addEventListener("keydown", (e) => {
+            if (joueur.vivant) {
+                if (e.key === "z" || e.key === "ArrowUp") joueur.x = Math.max(0, joueur.x - 1);
+                if (e.key === "s" || e.key === "ArrowDown") joueur.x = Math.min(taille - 1, joueur.x + 1);
+                if (e.key === "q" || e.key === "ArrowLeft") joueur.y = Math.max(0, joueur.y - 1);
+                if (e.key === "d" || e.key === "ArrowRight") joueur.y = Math.min(taille - 1, joueur.y + 1);
+                if (e.key === " ") attaquer();
+                afficherMonde();
+            }
+        });
+
+        setInterval(() => {
+            if (joueur.vivant) {
+                deplacerEnnemis();
+                tirerProjectile();
+                mettreAJourProjectiles();
+                afficherMonde();
+            }
+        }, 1000);
+
+        afficherMonde();
+    </script>
+</body>
+</html>
